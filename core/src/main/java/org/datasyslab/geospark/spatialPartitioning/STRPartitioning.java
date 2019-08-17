@@ -1,5 +1,8 @@
 package org.datasyslab.geospark.spatialPartitioning;
-
+/*
+* osmconvert ---> https://stackoverflow.com/questions/24941936/create-a-csv-file-of-all-the-addresses-in-an-area-from-osm-file
+comand ---> osmconvert uk_streets.osm --csv="@lon @lat addr:city addr:street" --csv-headline --csv-separator=, -o=uk_streets.csv
+*/
 import com.vividsolutions.jts.geom.Envelope;
 
 import java.io.Serializable;
