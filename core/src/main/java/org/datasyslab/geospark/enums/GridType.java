@@ -26,6 +26,10 @@ import java.io.Serializable;
 public enum GridType
         implements Serializable
 {
+    /*
+     * The STR Partitioner
+     * */
+    STR,
 
     /**
      * The equalgrid.

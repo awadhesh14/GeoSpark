@@ -33,15 +33,7 @@ import org.apache.spark.storage.StorageLevel;
 import org.apache.spark.util.random.SamplingUtils;
 import org.datasyslab.geospark.enums.GridType;
 import org.datasyslab.geospark.enums.IndexType;
-import org.datasyslab.geospark.spatialPartitioning.EqualPartitioning;
-import org.datasyslab.geospark.spatialPartitioning.FlatGridPartitioner;
-import org.datasyslab.geospark.spatialPartitioning.HilbertPartitioning;
-import org.datasyslab.geospark.spatialPartitioning.KDBTree;
-import org.datasyslab.geospark.spatialPartitioning.KDBTreePartitioner;
-import org.datasyslab.geospark.spatialPartitioning.QuadtreePartitioning;
-import org.datasyslab.geospark.spatialPartitioning.RtreePartitioning;
-import org.datasyslab.geospark.spatialPartitioning.SpatialPartitioner;
-import org.datasyslab.geospark.spatialPartitioning.VoronoiPartitioning;
+import org.datasyslab.geospark.spatialPartitioning.*;
 import org.datasyslab.geospark.spatialPartitioning.quadtree.QuadTreePartitioner;
 import org.datasyslab.geospark.spatialPartitioning.quadtree.StandardQuadTree;
 import org.datasyslab.geospark.spatialRddTool.IndexBuilder;
@@ -248,6 +240,12 @@ public class SpatialRDD<T extends Geometry>
                 boundaryEnvelope.getMinY(), boundaryEnvelope.getMaxY() + 0.01);
 
         switch (gridType) {
+            case STR:{
+                STRPartitioning strPartitioning = new STRPartitioning(samples, paddedBoundary, numPartitions);
+                grids = strPartitioning.getGrids();
+                partitioner = new FlatGridPartitioner(grids);
+                break;
+            }
             case EQUALGRID: {
                 EqualPartitioning EqualPartitioning = new EqualPartitioning(paddedBoundary, numPartitions);
                 grids = EqualPartitioning.getGrids();

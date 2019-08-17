@@ -38,7 +38,12 @@ import org.wololo.jts2geojson.GeoJSONReader;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 public class FormatMapper<T extends Geometry>
         implements Serializable, FlatMapFunction<Iterator<String>, T>
@@ -186,23 +191,11 @@ public class FormatMapper<T extends Geometry>
         return geometry;
     }
 
-
-
     public static List<String> readGeoJsonPropertyNames(String geoJson){
         if (geoJson.contains("Feature") || geoJson.contains("feature") || geoJson.contains("FEATURE")) {
-            if (geoJson.contains("properties") ) {
+            if (geoJson.contains("properties")) {
                 Feature feature = (Feature) GeoJSONFactory.create(geoJson);
-                if (Objects.isNull(feature.getId())){
-                    return new ArrayList(feature.getProperties().keySet());
-                }
-                else{
-                    List<String> propertyList = new ArrayList<>(Arrays.asList("id"));
-                    for (String geoJsonProperty: feature.getProperties().keySet()){
-                        propertyList.add(geoJsonProperty);
-                    }
-                    return propertyList;
-                }
-
+                return new ArrayList(feature.getProperties().keySet());
             }
         }
         logger.warn("[GeoSpark] The GeoJSON file doesn't have feature properties");
@@ -253,9 +246,12 @@ public class FormatMapper<T extends Geometry>
     public Coordinate[] readCoordinates(String line)
     {
         final String[] columns = line.split(splitter.getDelimiter());
+        //System.out.println(Arrays.toString(columns));
         final int actualEndOffset = this.endOffset >= 0 ? this.endOffset : (this.geometryType == GeometryType.POINT? startOffset+1:columns.length - 1);
+        //System.out.println("actualEndOffset:"+actualEndOffset+" this.endOffset:"+this.endOffset+" this.geometryType:"+this.geometryType+" startOffset:"+startOffset+" columns.length:"+columns.length);
         final Coordinate[] coordinates = new Coordinate[(actualEndOffset - startOffset + 1) / 2];
         for (int i = this.startOffset; i <= actualEndOffset; i += 2) {
+            //System.out.println(i+"------------->"+columns[i]);
             coordinates[(i - startOffset) / 2 ] = new Coordinate(Double.parseDouble(columns[i]), Double.parseDouble(columns[i + 1]));
         }
         if (carryInputData)
@@ -281,6 +277,7 @@ public class FormatMapper<T extends Geometry>
                 else otherAttributes += "\t" + columns[i];
             }
         }
+        System.out.println(Arrays.toString(coordinates));
         return coordinates;
     }
 
