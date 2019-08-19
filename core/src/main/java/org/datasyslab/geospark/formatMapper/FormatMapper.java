@@ -277,7 +277,7 @@ public class FormatMapper<T extends Geometry>
                 else otherAttributes += "\t" + columns[i];
             }
         }
-        System.out.println(Arrays.toString(coordinates));
+        //System.out.println(Arrays.toString(coordinates));
         return coordinates;
     }
 

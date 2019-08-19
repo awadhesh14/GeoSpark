@@ -25,6 +25,75 @@ public class STRPartitioning implements Serializable {
         int size = (rootP + 1) * rootP;
         int elementsperpartition = samples.size()/partitions;
         int xBinSize = samples.size()/rootP;
+
+        ArrayList<Envelope> samples1 = new ArrayList(samples);
+        samples1.sort(new Comparator<Envelope>() {
+            @Override
+            public int compare(Envelope t1, Envelope t2) {
+                if(t1.getMinX()< t2.getMinX()) return -1;
+                else if(t1.getMinX()> t2.getMinX()) return 1;
+                else return 0;
+            }
+        });
+
+        double[] arr1 = new double[rootP +1];
+        for(int i=0,j=0;i<rootP+1;i++){
+            if(i == 0){
+                arr1[i] = boundary.getMinX();//samples1.get(j).getMinX();
+                j+=(samples1.size()/rootP -1);
+            }
+            else if(i == rootP){
+                arr1[i] = boundary.getMaxX();//samples1.get(j).centre().x;
+                j+=(samples1.size()/rootP -1);
+            }
+            else{
+                arr1[i] = samples1.get(j).getMinX();
+                j+=(samples1.size()/rootP -1);
+            }
+        }
+
+
+        for(int i=0;i<rootP;i++){
+            Collections.sort(samples1.subList(i * samples1.size()/rootP, samples1.size() > (i + 1) * (samples1.size()/rootP) ? (i + 1) * (samples1.size()/rootP)  : samples1.size()), new Comparator<Envelope>() {
+                @Override
+                public int compare(Envelope t1, Envelope t2) {
+                    if(t1.getMinY()<t2.getMinY()) return -1;
+                    else if(t1.getMinY()>t2.getMinY()) return 1;
+                    else return 0;
+                }
+            });
+        }
+
+        double[] arr2 = new double[size];
+        /*try {*/
+        for (int i = 0, j = 0; i < size; i++) {
+            if (i % (rootP + 1) == 0) {
+                arr2[i] = boundary.getMinY();
+                j += elementsperpartition;
+            } else if (i % (rootP + 1) == rootP) {
+                arr2[i] = boundary.getMaxY();
+                //j += elementsperpartition;
+            } else {
+                arr2[i] = samples1.get(j).getMinY();
+                j += elementsperpartition;
+            }
+        }
+
+
+        for(int i=0; i<rootP; i++){
+            for(int j=0; j<rootP; j++){
+                grids.add(new Envelope(arr1[i],arr1[i+1],arr2[j],arr2[j+1]));
+            }
+        }
+
+    }
+    public STRPartitioning(List<Envelope> samples, Envelope boundary, int partitions,boolean debug)
+            throws Exception
+    {
+        int rootP = (int) Math.sqrt(partitions);
+        int size = (rootP + 1) * rootP;
+        int elementsperpartition = samples.size()/partitions;
+        int xBinSize = samples.size()/rootP;
         System.out.println("sample size = "+samples.size());
         System.out.println("rootP = "+rootP);
         System.out.println("size = "+size);
@@ -53,10 +122,16 @@ public class STRPartitioning implements Serializable {
             System.out.println("life is BAD on MAXIMUM");
             System.out.println(boundary.getMaxX()+"  " +samples1.get(samples1.size()-1).getMinX());
         }
+
+        System.out.println("---------------------X_SORT_START-----------------------------");
+        for(int i=0;i<samples1.size();i++)
+            System.out.println(samples1.get(i).getMinX()+"   "+samples1.get(i).getMinY());
+        System.out.println("----------------------X_SORT_END----------------------------");
+
         double[] arr1 = new double[rootP +1];
         for(int i=0,j=0;i<rootP+1;i++){
             if(i == 0){
-                arr1[i] = samples1.get(j).centre().x;
+                arr1[i] = boundary.getMinX();//samples1.get(j).getMinX();
                 j+=(samples1.size()/rootP -1);
             }
             else if(i == rootP){
@@ -64,7 +139,7 @@ public class STRPartitioning implements Serializable {
                 j+=(samples1.size()/rootP -1);
             }
             else{
-                arr1[i] = samples1.get(j).centre().y;
+                arr1[i] = samples1.get(j).getMinX();
                 j+=(samples1.size()/rootP -1);
             }
         }
@@ -72,16 +147,20 @@ public class STRPartitioning implements Serializable {
         for(int i=0;i<rootP+1;i++){
             System.out.print(arr1[i]+" ");
         }
-        /*for(int i=0;i<rootP;i++){
-            Collections.sort(samples1.subList((i * xBinSize), (i + 1) * xBinSize*//*FIXME: last some elements are left*//*), new Comparator<Envelope>() {
+        for(int i=0;i<rootP;i++){
+            Collections.sort(samples1.subList(i * samples1.size()/rootP, samples1.size() > (i + 1) * (samples1.size()/rootP) ? (i + 1) * (samples1.size()/rootP)  : samples1.size()), new Comparator<Envelope>() {
                 @Override
                 public int compare(Envelope t1, Envelope t2) {
-                    if(t1.centre().y < t2.centre().y) return -1;
-                    else if(t1.centre().y> t2.centre().y) return 1;
+                    if(t1.getMinY()<t2.getMinY()) return -1;
+                    else if(t1.getMinY()>t2.getMinY()) return 1;
                     else return 0;
                 }
             });
-         }*/
+        }
+        System.out.println("---------------------Y_SORT_START-----------------------------");
+        for(int i=0;i<samples1.size();i++)
+            System.out.println(samples1.get(i).getMinX()+"   "+samples1.get(i).getMinY());
+        System.out.println("----------------------Y_SORT_END----------------------------");
         double[] arr2 = new double[size];
         /*try {*/
         for (int i = 0, j = 0; i < size; i++) {
@@ -93,65 +172,27 @@ public class STRPartitioning implements Serializable {
                 arr2[i] = boundary.getMaxY();
                 //j += elementsperpartition;
             } else {
-                arr2[i] = samples1.get(j).centre().y;
+                arr2[i] = samples1.get(j).getMinY();
                 j += elementsperpartition;
             }
         }
-        /*}
-        catch(IndexOutOfBoundsException e){
-            for(int i=0;i<size;i++){
-                System.out.print(arr2[i]+" ");
-            }
-            System.out.println(e);
-        }*/
+
 
         for(int i=0; i<rootP; i++){
             for(int j=0; j<rootP; j++){
                 grids.add(new Envelope(arr1[i],arr1[i+1],arr2[j],arr2[j+1]));
             }
         }
-        /*Double root = Math.sqrt(partitions);//partitions = 16
-        int xPartitions = root.intValue(); //xPartitions = 4
-        int noOfLines = xPartitions-1;     //noOfLines = 3
-        int xBinSize = samples1.size()/xPartitions; //xBin = 25
-        int yBinSize = xBinSize/xPartitions;          //yBin = 6
+        System.out.println("-----------------------ARR1---------------------------");
+        for(int i=0;i<arr1.length;i++)
+            System.out.print(arr1[i]+" ");
+        System.out.println("\n-----------------------ARR2---------------------------");
+        for(int i=0;i<arr2.length;i++)
+            System.out.print(arr2[i]+" ");
+        System.out.println("--------------------------------------------------");
 
-        double[] xlines = new double[noOfLines+2];
-        for(int i=1;i<=noOfLines;i++) {
-            xlines[i] = samples1.get((i * xBinSize)-1).centre().x;
-        }
-        xlines[0] = boundary.getMinX();
-        xlines[noOfLines+1] = boundary.getMaxX();
-
-
-        double[][] ylines = new double[xPartitions][noOfLines+2];//[4][5]
-        for(int i=0;i<xPartitions;i++){
-            Collections.sort(samples1.subList((i * xBinSize), (i + 1) * xBinSize*//*FIXME: last some elements are left*//*), new Comparator<Envelope>() {
-                @Override
-                public int compare(Envelope t1, Envelope t2) {
-                    if(t1.centre().y < t2.centre().y) return -1;
-                    else if(t1.centre().y> t2.centre().y) return 1;
-                    else return 0;
-                }
-            });
-        }*/
-
-
-
-
-
-
-
-
-        /*STRtree strtree = new STRtree(samples.size() / partitions);
-        for (Envelope sample : samples) {
-            strtree.insert(sample, sample);
-        }
-
-        List<Envelope> envelopes = strtree.queryBoundary();
-        for (Envelope envelope : envelopes) {
-            grids.add(envelope);
-        }*/
+        this.getGrids().forEach(l -> System.out.println(l.getMinX()+" "+ l.getMaxX()+" "+l.getMinY()+" "+l.getMaxY()));
+        System.out.println("--------------------------GRIDS------------------------");
     }
 
 
