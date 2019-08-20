@@ -36,6 +36,7 @@ public class STRPartitioning implements Serializable {
             }
         });
 
+
         double[] arr1 = new double[rootP +1];
         for(int i=0,j=0;i<rootP+1;i++){
             if(i == 0){
@@ -81,12 +82,14 @@ public class STRPartitioning implements Serializable {
 
 
         for(int i=0; i<rootP; i++){
-            for(int j=0; j<rootP; j++){
+            for(int j=i*(rootP+1); j<((i+1)*(rootP+1)-1); j++){
                 grids.add(new Envelope(arr1[i],arr1[i+1],arr2[j],arr2[j+1]));
             }
         }
 
     }
+
+
     public STRPartitioning(List<Envelope> samples, Envelope boundary, int partitions,boolean debug)
             throws Exception
     {
