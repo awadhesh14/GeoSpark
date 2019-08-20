@@ -179,7 +179,7 @@ public class STRPartitioning implements Serializable {
 
 
         for(int i=0; i<rootP; i++){
-            for(int j=0; j<rootP; j++){
+            for(int j=i*(rootP+1); j<((i+1)*(rootP+1)-1); j++){
                 grids.add(new Envelope(arr1[i],arr1[i+1],arr2[j],arr2[j+1]));
             }
         }
