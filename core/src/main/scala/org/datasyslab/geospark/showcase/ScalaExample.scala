@@ -31,7 +31,9 @@ import org.datasyslab.geospark.spatialRDD.{CircleRDD, PointRDD, PolygonRDD}
 /**
   * The Class ScalaExample.
   */
-object ScalaExample extends App {
+object ScalaExample extends App
+{
+/*
 
   val conf = new SparkConf().setAppName("GeoSparkRunnableExample").setMaster("local[2]")
   conf.set("spark.serializer", classOf[KryoSerializer].getName)
@@ -266,5 +268,6 @@ object ScalaExample extends App {
         e.printStackTrace()
     }
   }
+*/
 
 }

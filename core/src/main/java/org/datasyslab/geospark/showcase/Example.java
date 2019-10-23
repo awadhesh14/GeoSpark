@@ -210,7 +210,7 @@ public class Example
             throws Exception
     {
         objectRDD = new PointRDD(sc, PointRDDInputLocation, PointRDDOffset, PointRDDSplitter, true, StorageLevel.MEMORY_ONLY());
-        objectRDD.rawSpatialRDD.persist(StorageLevel.MEMORY_ONLY());
+        //objectRDD.rawSpatialRDD.persist(StorageLevel.MEMORY_ONLY());
         for (int i = 0; i < eachQueryLoopTimes; i++) {
             long resultSize = RangeQuery.SpatialRangeQuery(objectRDD, rangeQueryWindow, false, false).count();
             assert resultSize > -1;

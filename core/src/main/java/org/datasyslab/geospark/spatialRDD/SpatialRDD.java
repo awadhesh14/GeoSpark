@@ -24,7 +24,9 @@ import com.vividsolutions.jts.geom.LinearRing;
 import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.index.SpatialIndex;
 import org.apache.log4j.Logger;
+import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
@@ -49,12 +51,7 @@ import org.wololo.jts2geojson.GeoJSONWriter;
 import scala.Tuple2;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 // TODO: Auto-generated Javadoc
 
@@ -199,6 +196,111 @@ public class SpatialRDD<T extends Geometry>
     public void spatialPartitioning(GridType gridType, int numPartitions)
             throws Exception
     {
+        long startTime = System.nanoTime();
+        if (numPartitions <= 0) {
+            throw new IllegalArgumentException("Number of partitions must be >= 0");
+        }
+
+        if (this.boundaryEnvelope == null) {
+            throw new Exception("[AbstractSpatialRDD][spatialPartitioning] SpatialRDD boundary is null. Please call analyze() first.");
+        }
+        if (this.approximateTotalCount == -1) {
+            throw new Exception("[AbstractSpatialRDD][spatialPartitioning] SpatialRDD total count is unkown. Please call analyze() first.");
+        }
+
+        //Calculate the number of samples we need to take.
+        int sampleNumberOfRecords = RDDSampleUtils.getSampleNumbers(numPartitions, this.approximateTotalCount, this.sampleNumber);
+        //Take Sample
+        // RDD.takeSample implementation tends to scan the data multiple times to gather the exact
+        // number of samples requested. Repeated scans increase the latency of the join. This increase
+        // is significant for large datasets.
+        // See https://github.com/apache/spark/blob/412b0e8969215411b97efd3d0984dc6cac5d31e0/core/src/main/scala/org/apache/spark/rdd/RDD.scala#L508
+        // Here, we choose to get samples faster over getting exactly specified number of samples.
+        final double fraction = SamplingUtils.computeFractionForSampleSize(sampleNumberOfRecords, approximateTotalCount, false);
+        List<Envelope> samples = this.rawSpatialRDD.sample(false, fraction)
+                .map(new Function<T, Envelope>()
+                {
+                    @Override
+                    public Envelope call(T geometry)
+                            throws Exception
+                    {
+                        return geometry.getEnvelopeInternal();
+                    }
+                })
+                .collect();
+
+        logger.info("Collected " + samples.size() + " samples");
+
+        // Add some padding at the top and right of the boundaryEnvelope to make
+        // sure all geometries lie within the half-open rectangle.
+            final Envelope paddedBoundary = new Envelope(
+                    boundaryEnvelope.getMinX(), boundaryEnvelope.getMaxX() + 0.01,
+                    boundaryEnvelope.getMinY(), boundaryEnvelope.getMaxY() + 0.01);
+
+        switch (gridType) {
+            case STR:{
+                STRPartitioning strPartitioning = new STRPartitioning(samples, paddedBoundary, numPartitions);
+                grids = strPartitioning.getGrids();
+                partitioner = new FlatGridPartitioner(grids);
+                break;
+            }
+            case EQUALGRID: {
+                EqualPartitioning EqualPartitioning = new EqualPartitioning(paddedBoundary, numPartitions);
+                grids = EqualPartitioning.getGrids();
+                partitioner = new FlatGridPartitioner(grids);
+                break;
+            }
+            case HILBERT: {
+                HilbertPartitioning hilbertPartitioning = new HilbertPartitioning(samples, paddedBoundary, numPartitions);
+                grids = hilbertPartitioning.getGrids();
+                partitioner = new FlatGridPartitioner(grids);
+                break;
+            }
+            case RTREE: {
+                RtreePartitioning rtreePartitioning = new RtreePartitioning(samples, numPartitions);
+                grids = rtreePartitioning.getGrids();
+                partitioner = new FlatGridPartitioner(grids);
+                break;
+            }
+            case VORONOI: {
+                VoronoiPartitioning voronoiPartitioning = new VoronoiPartitioning(samples, numPartitions);
+                grids = voronoiPartitioning.getGrids();
+                partitioner = new FlatGridPartitioner(grids);
+                break;
+            }
+            case QUADTREE: {
+                QuadtreePartitioning quadtreePartitioning = new QuadtreePartitioning(samples, paddedBoundary, numPartitions);
+                partitionTree = quadtreePartitioning.getPartitionTree();
+                partitioner = new QuadTreePartitioner(partitionTree);
+                break;
+            }
+            case KDBTREE: {
+                final KDBTree tree = new KDBTree(samples.size() / numPartitions, numPartitions, paddedBoundary);
+                for (final Envelope sample : samples) {
+                    tree.insert(sample);
+                }
+                tree.assignLeafIds();
+                partitioner = new KDBTreePartitioner(tree);
+                break;
+            }
+            default:
+                throw new Exception("[AbstractSpatialRDD][spatialPartitioning] Unsupported spatial partitioning method.");
+        }
+
+        this.spatialPartitionedRDD = partition(partitioner);
+        long endTime = System.nanoTime();
+        long duration = (endTime - startTime);  //divide by 1000000 to get milliseconds.
+        /*String time = "duration of "+ gridType + " is = " + duration;
+        List<String> data = Arrays.asList(time);
+        JavaRDD<String> items = sc.parallelize(data,1);*/
+        System.out.println("duration of "+ gridType + " is = " + duration);
+
+    }
+
+    public void spatialPartitioning(JavaSparkContext sc, GridType gridType, int numPartitions)
+            throws Exception
+    {
+        long startTime = System.nanoTime();
         if (numPartitions <= 0) {
             throw new IllegalArgumentException("Number of partitions must be >= 0");
         }
@@ -290,7 +392,17 @@ public class SpatialRDD<T extends Geometry>
         }
 
         this.spatialPartitionedRDD = partition(partitioner);
+        long endTime = System.nanoTime();
+        long duration = (endTime - startTime);  //divide by 1000000 to get milliseconds.
+        String time = "duration of "+ gridType + " is = " + duration;
+
+        List<String> data = Arrays.asList(time);
+        JavaRDD<String> items = sc.parallelize(data);
+        items.saveAsTextFile("/user/dreamlab/OUTPUT2GB/TIMES/"+gridType);
+        System.out.println("duration of "+ gridType + " is = " + duration);
+
     }
+
     public void spatialPartitioning(GridType gridType, int numPartitions,boolean debug)
             throws Exception
     {

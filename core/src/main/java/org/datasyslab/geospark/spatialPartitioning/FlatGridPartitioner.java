@@ -73,7 +73,7 @@ public class FlatGridPartitioner
             result.add(new Tuple2<>(overflowContainerID, spatialObject));
         }
 
-        return result.iterator();
+            return result.iterator();
     }
 
     @Nullable

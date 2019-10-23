@@ -29,7 +29,8 @@ public class StatCalculator
     private Envelope boundary;
     private long count;
 
-    public StatCalculator(Envelope boundary, long count)
+    public
+    StatCalculator(Envelope boundary, long count)
     {
         Objects.requireNonNull(boundary, "Boundary cannot be null");
         if (count <= 0) {
