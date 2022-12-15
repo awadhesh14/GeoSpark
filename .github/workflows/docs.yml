@@ -35,7 +35,7 @@ jobs:
 
     - run: sudo apt update
 
-    - run: apt install --no-install-recommends r-cran-rstan
+    - run: sudo apt install --no-install-recommends r-cran-rstan
     - run: sudo apt install littler tree libcurl4-openssl-dev
     - run: (sudo Rscript generate-docs.R)
 

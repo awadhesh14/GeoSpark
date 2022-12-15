@@ -39,4 +39,4 @@ sudo add-apt-repository ppa:c2d4u.team/c2d4u4.0+
 
 sudo apt update
 
-apt install --no-install-recommends r-cran-rstan
+sudo apt install --no-install-recommends r-cran-rstan
