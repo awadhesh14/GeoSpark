@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
       with:
@@ -21,6 +21,21 @@ jobs:
     - run: pip install mkdocs-macros-plugin
     - run: pip install mkdocs-git-revision-date-localized-plugin
     - run: sudo apt update
+    - run: sudo DEBIAN_FRONTEND=noninteractive apt-get -y install libcurl4-openssl-dev
+    - run: sudo apt update -qq
+    - run: sudo apt install --no-install-recommends software-properties-common dirmngr
+    - run: wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | sudo tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc
+    - run: sudo add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/"
+
+    - run: sudo apt update
+
+    - run: sudo apt install --no-install-recommends r-base
+
+    - run: sudo add-apt-repository ppa:c2d4u.team/c2d4u4.0+
+
+    - run: sudo apt update
+
+    - run: sudo apt install --no-install-recommends r-cran-rstan
     - run: sudo apt install littler tree libcurl4-openssl-dev
     - run: (sudo Rscript generate-docs.R)
 
